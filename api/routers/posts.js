@@ -1,10 +1,13 @@
 const router = require("express").Router();
 const jwt = require("jsonwebtoken"); // トークン発行
+
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
+const isAuthenticated = require("../middleware/isAuthenticated");
+
 // 投稿
-router.post("/post", async (req, res) => {
+router.post("/post", isAuthenticated, async (req, res) => {
   const { content } = req.body;
 
   if(!content) {
@@ -15,7 +18,10 @@ router.post("/post", async (req, res) => {
     const newPost = await prisma.post.create({
       data: {
         content,
-        authorId: 1,
+        authorId: req.userId,
+      },
+      include: {
+        author: true,
       },
     });
     res.status(201).json(newPost);
@@ -32,7 +38,10 @@ router.get("/get_latest_post", async (req, res) => {
   try {
     const latestPosts = await prisma.post.findMany({
       take: 10,
-      orderBy: { createdAt: "desc" }
+      orderBy: { createdAt: "desc" },
+      include: {
+        author: true,
+      }
     });
 
     return res.json(latestPosts)
